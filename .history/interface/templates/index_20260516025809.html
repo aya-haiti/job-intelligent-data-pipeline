@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Job Intelligent</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body{background:#f5f7fb;color:#1a202c;min-height:100vh}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#4c51bf 0%,#764ba2 100%);color:white;padding:20px 40px;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
+.header-content{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:24px;font-weight:700}
+.logo span{opacity:0.7}
+.stats-bar{display:flex;gap:32px;font-size:13px}
+.stat-item strong{font-size:20px;display:block;margin-bottom:2px}
+
+/* LAYOUT */
+.app{max-width:1400px;margin:24px auto;padding:0 20px;display:grid;grid-template-columns:1fr;gap:24px}
+.app.with-sidebar{grid-template-columns:280px 1fr}
+@media(max-width:900px){.app.with-sidebar{grid-template-columns:1fr}}
+
+.sidebar{position:sticky;top:24px;align-self:start;background:white;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.main{display:flex;flex-direction:column;gap:20px}
+
+/* INPUT CARD */
+.card{background:white;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+h1{font-size:24px;margin-bottom:6px;color:#1a202c}
+.subtitle{color:#718096;font-size:14px;margin-bottom:20px}
+
+.tabs{display:flex;gap:4px;background:#f7fafc;padding:4px;border-radius:10px;margin-bottom:20px}
+.tab{flex:1;padding:10px 16px;cursor:pointer;font-weight:600;color:#718096;border-radius:8px;text-align:center;font-size:14px;transition:all 0.2s}
+.tab.active{background:white;color:#4c51bf;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+textarea{width:100%;min-height:120px;padding:14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;transition:border-color 0.2s}
+textarea:focus{outline:none;border-color:#4c51bf}
+
+.file-upload{border:2px dashed #cbd5e0;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s}
+.file-upload:hover{border-color:#4c51bf;background:#f7fafc}
+.file-upload.has-file{border-color:#48bb78;background:#f0fff4}
+.file-upload input{display:none}
+.file-upload-icon{font-size:36px;margin-bottom:8px}
+.file-upload-text{color:#4a5568;font-weight:500;font-size:14px}
+.file-upload-hint{color:#a0aec0;font-size:12px;margin-top:4px}
+
+.btn{background:linear-gradient(135deg,#4c51bf,#764ba2);color:white;border:none;padding:12px 24px;font-size:14px;font-weight:600;border-radius:10px;cursor:pointer;transition:all 0.2s;width:100%;margin-top:16px}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(76,81,191,0.3)}
+.btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+.btn-secondary{background:#edf2f7;color:#4a5568}
+.btn-sm{padding:6px 12px;font-size:12px;width:auto;margin:0}
+
+/* SEARCH BAR */
+.search-bar{display:flex;gap:8px;margin-bottom:16px}
+.search-bar input{flex:1;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px}
+.search-bar input:focus{outline:none;border-color:#4c51bf}
+
+/* SIDEBAR FILTERS */
+.sidebar h3{font-size:13px;color:#718096;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;font-weight:700}
+.filter-group{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #edf2f7}
+.filter-group:last-child{border-bottom:none}
+.filter-label{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:14px;color:#4a5568}
+.filter-label input{cursor:pointer}
+.range-display{font-size:13px;color:#4c51bf;font-weight:600;margin-top:4px}
+input[type=range]{width:100%;margin:4px 0}
+
+/* COMPETENCES BLOCK */
+.comp-block{background:#f7fafc;border-radius:12px;padding:16px;margin-bottom:16px}
+.comp-block h3{font-size:14px;color:#2d3748;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.comp-category{margin-bottom:10px}
+.comp-cat-name{font-size:11px;color:#718096;font-weight:600;text-transform:uppercase;margin-bottom:6px}
+.comp-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{background:white;border:1px solid #4c51bf;color:#4c51bf;padding:3px 10px;border-radius:14px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.tag.editable .remove{cursor:pointer;font-weight:bold;opacity:0.5}
+.tag.editable .remove:hover{opacity:1;color:#e53e3e}
+.tag-add{background:#edf2f7;border:1px dashed #a0aec0;color:#4a5568;cursor:pointer}
+.tag-matched{background:#48bb78;color:white;border-color:#48bb78}
+.tag-missing{background:#fed7d7;color:#c53030;border-color:#feb2b2}
+
+.warning{background:#fffaf0;border-left:3px solid #ed8936;padding:10px 14px;border-radius:6px;color:#7b341e;font-size:13px;margin-top:10px}
+
+/* RESULTS */
+.results-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.results-count{font-size:14px;color:#718096}
+.results-count strong{color:#1a202c;font-size:18px}
+.sort-control select{padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;background:white;font-size:13px;cursor:pointer}
+
+/* OFFER CARDS */
+.offer-card{background:white;border-radius:12px;padding:18px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;border:1.5px solid transparent}
+.offer-card:hover{border-color:#4c51bf;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+.offer-top{display:flex;justify-content:space-between;align-items:start;gap:12px;margin-bottom:8px}
+.offer-rank{background:#4c51bf;color:white;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;margin-right:8px}
+.offer-title{font-size:16px;font-weight:600;color:#1a202c;line-height:1.3}
+.offer-company{color:#718096;font-size:13px;margin-bottom:8px}
+
+.score{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#48bb78,#38a169);color:white;padding:4px 10px;border-radius:14px;font-weight:700;font-size:13px;white-space:nowrap}
+.score-low{background:linear-gradient(135deg,#ed8936,#dd6b20)}
+
+.offer-summary{color:#4a5568;font-size:13px;line-height:1.5;margin-bottom:10px}
+.offer-meta{display:flex;gap:12px;flex-wrap:wrap;color:#718096;font-size:12px;margin-bottom:10px}
+.offer-meta-item{display:inline-flex;align-items:center;gap:4px}
+.offer-skills{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.skill-mini{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.skill-mini.matched{background:#c6f6d5;color:#22543d}
+.skill-mini.missing{background:#edf2f7;color:#718096}
+.offer-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #f7fafc}
+.source-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:0.3px}
+.source-kaggle{background:#fef5e7;color:#b7791f}
+.source-adzuna{background:#e9d8fd;color:#6b46c1}
+.source-france-travail{background:#c6f6d5;color:#276749}
+.source-rekrute{background:#fed7d7;color:#c53030}
+.explication{font-size:11px;color:#a0aec0;font-style:italic}
+
+/* MODAL DETAIL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;backdrop-filter:blur(4px)}
+.modal-bg.active{display:flex;justify-content:flex-end}
+.modal{background:white;width:100%;max-width:600px;height:100vh;overflow-y:auto;animation:slideIn 0.25s ease-out;padding:32px}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.modal-close{position:absolute;top:16px;right:16px;background:#f7fafc;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;color:#4a5568}
+.modal h2{font-size:22px;margin-bottom:8px;padding-right:40px}
+.modal-company{color:#718096;font-size:15px;margin-bottom:16px}
+.modal-section{margin-bottom:20px}
+.modal-section h4{font-size:12px;color:#4c51bf;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;font-weight:700}
+.modal-actions{display:flex;gap:10px;margin-top:24px;position:sticky;bottom:0;background:white;padding-top:12px}
+
+/* STATES */
+.loader{display:none;text-align:center;padding:60px}
+.loader.active{display:block}
+.spinner{width:48px;height:48px;border:3px solid #edf2f7;border-top-color:#4c51bf;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{color:#718096;font-size:14px}
+
+.empty{text-align:center;padding:60px 20px;color:#a0aec0}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:0.5}
+
+.error{background:#fff5f5;border:1px solid #fc8181;color:#c53030;padding:12px 16px;border-radius:10px;margin:8px 0;font-size:14px}
+
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-content">
+    <div class="logo">Job<span>Intelligent</span></div>
+    <div class="stats-bar">
+      <div class="stat-item"><strong id="statOffres">—</strong>Offres data</div>
+      <div class="stat-item"><strong id="statSources">—</strong>Sources</div>
+      <div class="stat-item"><strong id="statVilles">—</strong>Villes</div>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR FILTRES -->
+  <aside class="sidebar" id="sidebar" style="display:none">
+    <h3>Filtres</h3>
+
+    <div class="filter-group">
+      <h3>Source</h3>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="kaggle" checked> Kaggle</label>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="adzuna" checked> Adzuna</label>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="france-travail" checked> France Travail</label>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="rekrute" checked> Rekrute</label>
+    </div>
+
+    <div class="filter-group">
+      <h3>Type de travail</h3>
+      <label class="filter-label"><input type="checkbox" class="f-type" value="Onsite" checked> Onsite</label>
+      <label class="filter-label"><input type="checkbox" class="f-type" value="Remote" checked> Remote</label>
+      <label class="filter-label"><input type="checkbox" class="f-type" value="Hybrid" checked> Hybrid</label>
+    </div>
+
+    <div class="filter-group">
+      <h3>Score minimum</h3>
+      <input type="range" id="fMinScore" min="0" max="100" value="0" oninput="updateRange();applyFilters()">
+      <div class="range-display"><span id="fMinScoreLabel">0</span>%</div>
+    </div>
+
+    <div class="filter-group">
+      <h3>Localisation</h3>
+      <input type="text" id="fVille" placeholder="Ex : Paris, London..." oninput="applyFilters()" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px">
+    </div>
+
+    <button class="btn btn-secondary btn-sm" onclick="resetFilters()" style="width:100%">Réinitialiser</button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- CARTE D'ENTREE -->
+    <div class="card">
+      <h1>Trouvez les meilleures offres data pour votre profil</h1>
+      <p class="subtitle">Recommandation par TF-IDF et similarité cosinus sur 4 sources d'offres</p>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="text" onclick="switchTab('text')">✍️ Saisir mes compétences</div>
+        <div class="tab" data-tab="cv" onclick="switchTab('cv')">📄 Importer mon CV</div>
+        <div class="tab" data-tab="search" onclick="switchTab('search')">🔍 Rechercher</div>
+      </div>
+
+      <div id="tabText" class="tab-content active">
+        <textarea id="profileInput" placeholder="Ex : Data Scientist avec Python, SQL, Machine Learning, TensorFlow. Je recherche un poste en data science avec du NLP."></textarea>
+        <button class="btn" onclick="rechercherTexte()">🚀 Lancer la recherche</button>
+      </div>
+
+      <div id="tabCv" class="tab-content">
+        <label class="file-upload" id="fileUploadLabel">
+          <input type="file" id="cvInput" accept=".pdf,.docx" onchange="onFileSelected()">
+          <div class="file-upload-icon">📄</div>
+          <div class="file-upload-text" id="fileText">Cliquez pour sélectionner votre CV</div>
+          <div class="file-upload-hint">PDF ou DOCX</div>
+        </label>
+        <button class="btn" onclick="rechercherCV()">📊 Analyser mon CV</button>
+      </div>
+
+      <div id="tabSearch" class="tab-content">
+        <div class="search-bar">
+          <input type="text" id="searchInput" placeholder="Mot-clé : titre de poste, compétence, ville, entreprise...">
+          <button class="btn" style="width:auto;margin:0" onclick="rechercherKeyword()">Rechercher</button>
+        </div>
+        <p class="subtitle" style="margin:0">Recherche directe dans les 7 000+ offres du Data Warehouse.</p>
+      </div>
+
+      <div id="errorBox"></div>
+    </div>
+
+    <!-- COMPETENCES UTILISATEUR -->
+    <div class="card" id="userCompCard" style="display:none">
+      <div class="comp-block" style="background:white;padding:0;margin:0">
+        <h3>Vos compétences détectées <span id="compCount" style="background:#4c51bf;color:white;padding:2px 8px;border-radius:10px;font-size:11px"></span></h3>
+        <div id="userCompetencesBlock"></div>
+        <div id="addSkillSection" style="margin-top:12px">
+          <select id="addSkillSelect" style="padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;margin-right:6px">
+            <option value="">+ Ajouter une compétence</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="addSkill()">Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOADER -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <div class="loader-text" id="loaderText">Analyse en cours...</div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="resultsCard" class="card" style="display:none">
+      <div class="results-toolbar">
+        <div class="results-count">
+          <strong id="resultsTotal">0</strong> offres trouvées
+        </div>
+        <div class="sort-control">
+          <label style="font-size:13px;color:#718096;margin-right:6px">Trier par :</label>
+          <select id="sortSelect" onchange="renderOffers()">
+            <option value="score">Score (décroissant)</option>
+            <option value="rang">Rang</option>
+            <option value="source">Source</option>
+            <option value="ville">Ville</option>
+          </select>
+        </div>
+      </div>
+      <div id="offersList"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL DETAIL -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// État global
+// ============================================================================
+let allOffers = [];
+let userSkills = [];
+let savedOffers = JSON.parse(localStorage.getItem('savedOffers') || '[]');
+let taxonomy = {};
+
+// ============================================================================
+// Init
+// ============================================================================
+fetch('/api/stats').then(r => r.json()).then(d => {
+  document.getElementById('statOffres').textContent = d.nb_offres.toLocaleString();
+  document.getElementById('statSources').textContent = d.nb_sources;
+  document.getElementById('statVilles').textContent = d.nb_villes;
+  taxonomy = d.taxonomie || {};
+  fillAddSkillSelect();
+});
+
+function fillAddSkillSelect() {
+  const sel = document.getElementById('addSkillSelect');
+  sel.innerHTML = '<option value="">+ Ajouter une compétence</option>';
+  for (const cat in taxonomy) {
+    const opt = document.createElement('optgroup');
+    opt.label = cat;
+    for (const skill of taxonomy[cat]) {
+      const o = document.createElement('option');
+      o.value = skill;
+      o.textContent = skill;
+      opt.appendChild(o);
+    }
+    sel.appendChild(opt);
+  }
+}
+
+// ============================================================================
+// Tabs
+// ============================================================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+
+// ============================================================================
+// File upload
+// ============================================================================
+function onFileSelected() {
+  const input = document.getElementById('cvInput');
+  if (input.files.length) {
+    document.getElementById('fileUploadLabel').classList.add('has-file');
+    document.getElementById('fileText').textContent = '✓ ' + input.files[0].name;
+  }
+}
+
+// ============================================================================
+// UI helpers
+// ============================================================================
+function showLoader(show, text) {
+  document.getElementById('loader').classList.toggle('active', show);
+  document.getElementById('loaderText').textContent = text || 'Analyse en cours...';
+  if (show) {
+    document.getElementById('resultsCard').style.display = 'none';
+    document.getElementById('userCompCard').style.display = 'none';
+  }
+}
+function showError(msg) {
+  document.getElementById('errorBox').innerHTML = `<div class="error">⚠️ ${msg}</div>`;
+}
+function clearError() { document.getElementById('errorBox').innerHTML = ''; }
+
+// ============================================================================
+// API calls
+// ============================================================================
+async function rechercherTexte() {
+  const profil = document.getElementById('profileInput').value.trim();
+  if (!profil) return showError('Veuillez saisir vos compétences.');
+  clearError(); showLoader(true, 'Analyse de votre profil...');
+  try {
+    const res = await fetch('/api/recommend', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({profile: profil, extra_skills: userSkills})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    afficherResultats(data);
+  } catch(e) { showError(e.message); }
+  showLoader(false);
+}
+
+async function rechercherCV() {
+  const input = document.getElementById('cvInput');
+  if (!input.files.length) return showError('Veuillez sélectionner un CV.');
+  clearError(); showLoader(true, 'Extraction et analyse du CV...');
+  try {
+    const formData = new FormData();
+    formData.append('cv', input.files[0]);
+    const res = await fetch('/api/upload-cv', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    afficherResultats(data);
+  } catch(e) { showError(e.message); }
+  showLoader(false);
+}
+
+async function rechercherKeyword() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return showError('Saisissez un mot-clé.');
+  clearError(); showLoader(true, 'Recherche en cours...');
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: q})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('userCompCard').style.display = 'none';
+    userSkills = [];
+    afficherResultats(data, true);
+  } catch(e) { showError(e.message); }
+  showLoader(false);
+}
+
+// ============================================================================
+// Affichage
+// ============================================================================
+function afficherResultats(data, isSearch = false) {
+  allOffers = data.recommandations || [];
+
+  // Compétences utilisateur
+  if (!isSearch && data.competences) {
+    userSkills = data.competences;
+    renderUserCompetences(data.competences_par_categorie || {});
+    document.getElementById('userCompCard').style.display = 'block';
+    if (data.competences.length < 3) {
+      document.getElementById('userCompetencesBlock').innerHTML +=
+        `<div class="warning">⚠️ Seulement ${data.competences.length} compétence(s) détectée(s). Vous pouvez en ajouter manuellement pour améliorer les recommandations.</div>`;
+    }
+  }
+
+  document.getElementById('resultsCard').style.display = 'block';
+  document.getElementById('sidebar').style.display = '';
+document.querySelector('.app').classList.add('with-sidebar');
+  renderOffers();
+  document.getElementById('resultsCard').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function renderUserCompetences(parCat) {
+  const block = document.getElementById('userCompetencesBlock');
+  document.getElementById('compCount').textContent = userSkills.length;
+  let html = '';
+  for (const cat in parCat) {
+    html += `<div class="comp-category">
+      <div class="comp-cat-name">${cat}</div>
+      <div class="comp-tags">${parCat[cat].map(s =>
+        `<span class="tag editable">${s}<span class="remove" onclick="removeSkill('${s}')">×</span></span>`
+      ).join('')}</div></div>`;
+  }
+  block.innerHTML = html || '<div class="warning">Aucune compétence détectée. Ajoutez-en manuellement.</div>';
+}
+
+function addSkill() {
+  const sel = document.getElementById('addSkillSelect');
+  if (!sel.value || userSkills.includes(sel.value)) return;
+  userSkills.push(sel.value);
+  // Reconstruire l'affichage
+  const parCat = {};
+  // On utilise une simple catégorie "Personnalisé" pour les ajouts
+  for (const s of userSkills) {
+    let cat = 'Personnalisé';
+    for (const c in taxonomy) if (taxonomy[c].includes(s)) cat = c;
+    parCat[cat] = parCat[cat] || [];
+    parCat[cat].push(s);
+  }
+  renderUserCompetences(parCat);
+  sel.value = '';
+  // Relancer la recherche avec le profil enrichi
+  const profil = document.getElementById('profileInput').value.trim();
+  if (profil) rechercherTexte();
+}
+
+function removeSkill(skill) {
+  userSkills = userSkills.filter(s => s !== skill);
+  const parCat = {};
+  for (const s of userSkills) {
+    let cat = 'Personnalisé';
+    for (const c in taxonomy) if (taxonomy[c].includes(s)) cat = c;
+    parCat[cat] = parCat[cat] || [];
+    parCat[cat].push(s);
+  }
+  renderUserCompetences(parCat);
+}
+
+// ============================================================================
+// Filtres & tri
+// ============================================================================
+function updateRange() {
+  document.getElementById('fMinScoreLabel').textContent = document.getElementById('fMinScore').value;
+}
+function resetFilters() {
+  document.querySelectorAll('.f-source,.f-type').forEach(c => c.checked = true);
+  document.getElementById('fMinScore').value = 0;
+  document.getElementById('fVille').value = '';
+  updateRange();
+  renderOffers();
+}
+function applyFilters() { renderOffers(); }
+
+function getFiltered() {
+  const sources = [...document.querySelectorAll('.f-source:checked')].map(c => c.value);
+  const types = [...document.querySelectorAll('.f-type:checked')].map(c => c.value);
+  const minScore = parseFloat(document.getElementById('fMinScore').value);
+  const villeFilter = document.getElementById('fVille').value.trim().toLowerCase();
+
+  return allOffers.filter(o =>
+    sources.includes(o.source)
+    && types.includes(o.type_travail)
+    && (o.score_pct == null || o.score_pct >= minScore)
+    && (!villeFilter || (o.ville || '').toLowerCase().includes(villeFilter))
+  );
+}
+
+function renderOffers() {
+  let offers = getFiltered();
+  const sort = document.getElementById('sortSelect').value;
+
+  if (sort === 'score') offers.sort((a, b) => (b.score_pct || 0) - (a.score_pct || 0));
+  if (sort === 'rang') offers.sort((a, b) => a.rang - b.rang);
+  if (sort === 'source') offers.sort((a, b) => (a.source || '').localeCompare(b.source || ''));
+  if (sort === 'ville') offers.sort((a, b) => (a.ville || '').localeCompare(b.ville || ''));
+
+  document.getElementById('resultsTotal').textContent = offers.length;
+
+  if (offers.length === 0) {
+    document.getElementById('offersList').innerHTML =
+      `<div class="empty"><div class="empty-icon">🔍</div><p>Aucune offre ne correspond à vos critères.</p>
+       <p style="font-size:13px;margin-top:8px">Essayez d'élargir vos filtres.</p></div>`;
+    return;
+  }
+
+  document.getElementById('offersList').innerHTML = offers.map((o, i) => `
+    <div class="offer-card" onclick="openModal(${o.rang || i})">
+      <div class="offer-top">
+        <div style="flex:1">
+          <div>${o.rang ? `<span class="offer-rank">#${o.rang}</span>` : ''}<span class="offer-title">${escapeHtml(o.titre)}</span></div>
+          <div class="offer-company">${escapeHtml(o.entreprise)}</div>
+        </div>
+        ${o.score_pct != null ? `<span class="score ${o.score_pct < 30 ? 'score-low' : ''}">${o.score_pct}%</span>` : ''}
+      </div>
+      <div class="offer-summary">${escapeHtml(o.resume)}</div>
+      <div class="offer-meta">
+        <span class="offer-meta-item">📍 ${escapeHtml(o.ville)}, ${escapeHtml(o.pays)}</span>
+        <span class="offer-meta-item">💼 ${escapeHtml(o.type_travail)}</span>
+        <span class="offer-meta-item">📋 ${escapeHtml(o.type_contrat || 'N/A')}</span>
+      </div>
+      <div class="offer-skills">
+        ${o.skills_matched.slice(0,4).map(s => `<span class="skill-mini matched">✓ ${s}</span>`).join('')}
+        ${o.skills_missing.slice(0,3).map(s => `<span class="skill-mini missing">${s}</span>`).join('')}
+        ${o.skills_offre.length > 7 ? `<span class="skill-mini">+${o.skills_offre.length - 7}</span>` : ''}
+      </div>
+      <div class="offer-footer">
+        <span class="source-badge source-${o.source}">${o.source}</span>
+        <span class="explication">${escapeHtml(o.explication)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================================
+// Modal détail
+// ============================================================================
+function openModal(rang) {
+  const o = allOffers.find(x => x.rang === rang) || allOffers[0];
+  if (!o) return;
+
+  const isSaved = savedOffers.includes(o.id_offre);
+
+  document.getElementById('modalContent').innerHTML = `
+    <h2>${escapeHtml(o.titre)}</h2>
+    <div class="modal-company">${escapeHtml(o.entreprise)} — ${escapeHtml(o.ville)}, ${escapeHtml(o.pays)}</div>
+
+    ${o.score_pct != null ? `
+    <div class="modal-section">
+      <h4>Score de matching</h4>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:36px;font-weight:700;color:#4c51bf">${o.score_pct}%</div>
+        <div style="flex:1;font-size:13px;color:#4a5568">${escapeHtml(o.explication)}</div>
+      </div>
+    </div>` : ''}
+
+    <div class="modal-section">
+      <h4>Informations</h4>
+      <p style="font-size:13px;color:#4a5568;line-height:1.7">
+        📍 <strong>Localisation :</strong> ${escapeHtml(o.ville)}, ${escapeHtml(o.pays)}<br>
+        💼 <strong>Type :</strong> ${escapeHtml(o.type_travail)}<br>
+        📋 <strong>Contrat :</strong> ${escapeHtml(o.type_contrat || 'Non précisé')}<br>
+        🌐 <strong>Source :</strong> ${escapeHtml(o.source)}
+      </p>
+    </div>
+
+    ${o.skills_matched.length > 0 ? `
+    <div class="modal-section">
+      <h4>✅ Compétences qui matchent votre profil (${o.nb_matched})</h4>
+      <div class="comp-tags">${o.skills_matched.map(s => `<span class="tag tag-matched">${s}</span>`).join('')}</div>
+    </div>` : ''}
+
+    ${o.skills_missing.length > 0 ? `
+    <div class="modal-section">
+      <h4>📌 Compétences à acquérir (${o.nb_missing})</h4>
+      <div class="comp-tags">${o.skills_missing.map(s => `<span class="tag tag-missing">${s}</span>`).join('')}</div>
+    </div>` : ''}
+
+    <div class="modal-section">
+      <h4>Description</h4>
+      <p style="font-size:13px;color:#4a5568;line-height:1.6;white-space:pre-wrap">${escapeHtml(o.description) || "Description non disponible. Voir l'offre originale sur la plateforme source."}</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ${isSaved ? 'btn-secondary' : ''}" onclick="toggleSave('${o.id_offre}')" id="saveBtn">${isSaved ? '⭐ Sauvegardée' : '☆ Sauvegarder'}</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Fermer</button>
+    </div>
+  `;
+  document.getElementById('modalBg').classList.add('active');
+}
+
+function closeModal(e) {
+  if (e && e.target.id !== 'modalBg') return;
+  document.getElementById('modalBg').classList.remove('active');
+}
+
+function toggleSave(id) {
+  if (savedOffers.includes(id)) savedOffers = savedOffers.filter(x => x !== id);
+  else savedOffers.push(id);
+  localStorage.setItem('savedOffers', JSON.stringify(savedOffers));
+  const btn = document.getElementById('saveBtn');
+  const isSaved = savedOffers.includes(id);
+  btn.textContent = isSaved ? '⭐ Sauvegardée' : '☆ Sauvegarder';
+  btn.className = 'btn ' + (isSaved ? 'btn-secondary' : '');
+}
+
+function escapeHtml(t) {
+  const div = document.createElement('div');
+  div.textContent = t == null ? '' : t;
+  return div.innerHTML;
+}
+
+// Enter key sur recherche
+document.getElementById('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') rechercherKeyword(); });
+</script>
+
+</body>
+</html>

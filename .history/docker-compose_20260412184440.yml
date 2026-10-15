@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # 1. PostgreSQL — Metastore Airflow
+  # ============================================
+  postgres-airflow:
+    image: postgres:13
+    container_name: postgres_airflow_jobint
+    environment:
+      POSTGRES_USER: ${POSTGRES_AIRFLOW_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_AIRFLOW_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_AIRFLOW_DB}
+    volumes:
+      - postgres_airflow_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_AIRFLOW_USER}"]
+      interval: 10s
+      retries: 5
+
+  # ============================================
+  # 2. PostgreSQL — Data Warehouse du projet
+  # ============================================
+  postgres-dwh:
+    image: postgres:13
+    container_name: postgres_dwh_jobint
+    environment:
+      POSTGRES_USER: ${POSTGRES_DWH_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DWH_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DWH_DB}
+    volumes:
+      - postgres_dwh_data:/var/lib/postgresql/data
+      - ./scripts/sql:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_DWH_USER}"]
+      interval: 10s
+      retries: 5
+
+  # ============================================
+  # 3. Initialisation Airflow (1ère exécution)
+  # ============================================
+  airflow-init:
+    image: ${AIRFLOW_IMAGE_NAME}
+    container_name: airflow_init_jobint
+    depends_on:
+      postgres-airflow:
+        condition: service_healthy
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_AIRFLOW_USER}:${POSTGRES_AIRFLOW_PASSWORD}@postgres-airflow/${POSTGRES_AIRFLOW_DB}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+    command: version
+
+  # ============================================
+  # 4. Webserver Airflow (interface web)
+  # ============================================
+  airflow-webserver:
+    image: ${AIRFLOW_IMAGE_NAME}
+    container_name: airflow_webserver_jobint
+    depends_on:
+      - airflow-init
+      - postgres-airflow
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_AIRFLOW_USER}:${POSTGRES_AIRFLOW_PASSWORD}@postgres-airflow/${POSTGRES_AIRFLOW_DB}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__WEBSERVER__SECRET_KEY=mysecretkey123jobint
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./scripts:/opt/airflow/scripts
+    ports:
+      - "8080:8080"
+    command: webserver
+
+  # ============================================
+  # 5. Scheduler Airflow (planificateur)
+  # ============================================
+  airflow-scheduler:
+    image: ${AIRFLOW_IMAGE_NAME}
+    container_name: airflow_scheduler_jobint
+    depends_on:
+      - airflow-init
+      - postgres-airflow
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_AIRFLOW_USER}:${POSTGRES_AIRFLOW_PASSWORD}@postgres-airflow/${POSTGRES_AIRFLOW_DB}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./scripts:/opt/airflow/scripts
+    command: scheduler
+
+volumes:
+  postgres_airflow_data:
+  postgres_dwh_data:

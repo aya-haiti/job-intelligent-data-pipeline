@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Job Intelligent — Recommandation d'offres data</title>
+<style>
+:root {
+  --primary: #1E3A8A;
+  --primary-light: #2563EB;
+  --primary-pale: #EFF6FF;
+  --bg: #F8FAFC;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-secondary: #64748B;
+  --success: #16A34A;
+  --success-light: #DCFCE7;
+  --warning: #EA580C;
+  --warning-light: #FFEDD5;
+  --danger: #DC2626;
+  --danger-light: #FEE2E2;
+  --white: #ffffff;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* HEADER */
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 18px 40px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.logo { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+.logo span { color: #93C5FD; font-weight: 400; }
+.stats-bar { display: flex; gap: 28px; }
+.stat-item {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.stat-item strong {
+  display: block;
+  font-size: 22px;
+  color: white;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  text-transform: none;
+  margin-bottom: 2px;
+}
+.header-nav { display: flex; gap: 8px; }
+.nav-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.2); }
+.nav-btn .count {
+  background: white;
+  color: var(--primary);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* LAYOUT */
+.app {
+  max-width: 1400px;
+  margin: 24px auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+.app.with-sidebar { grid-template-columns: 260px 1fr; }
+@media (max-width: 900px) { .app.with-sidebar { grid-template-columns: 1fr; } }
+
+.sidebar {
+  position: sticky;
+  top: 20px;
+  align-self: start;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+}
+.main { display: flex; flex-direction: column; gap: 16px; }
+
+/* CARD */
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+}
+.subtitle { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+
+/* TABS */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  gap: 4px;
+}
+.tab {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--primary); }
+.tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* INPUTS */
+textarea, input[type=text] {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--white);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+textarea { min-height: 110px; resize: vertical; }
+textarea:focus, input[type=text]:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.file-upload {
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg);
+}
+.file-upload:hover { border-color: var(--primary-light); background: var(--primary-pale); }
+.file-upload.has-file { border-color: var(--success); background: var(--success-light); }
+.file-upload input { display: none; }
+.file-upload-icon { font-size: 28px; margin-bottom: 8px; }
+.file-upload-text { color: var(--text); font-weight: 500; font-size: 13px; }
+.file-upload-hint { color: var(--text-secondary); font-size: 11px; margin-top: 4px; }
+
+/* BUTTONS */
+.btn {
+  background: var(--primary);
+  color: white;
+  border: 1px solid var(--primary);
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn:hover { background: var(--primary-light); border-color: var(--primary-light); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-full { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 12px; margin: 0; }
+.btn-secondary {
+  background: var(--white);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn-secondary:hover { background: var(--bg); border-color: var(--text-secondary); }
+.btn-success {
+  background: var(--success);
+  border-color: var(--success);
+}
+.btn-success:hover { background: #15803D; border-color: #15803D; }
+
+/* SEARCH BAR */
+.search-bar { display: flex; gap: 8px; }
+.search-bar input { flex: 1; }
+.search-bar .btn { margin: 0; }
+
+/* SIDEBAR FILTERS */
+.sidebar h3 {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+.filter-group { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+.filter-group:last-child { border-bottom: none; padding-bottom: 0; }
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+.filter-label input { cursor: pointer; accent-color: var(--primary); }
+.range-display { font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 4px; }
+input[type=range] { width: 100%; accent-color: var(--primary); }
+
+/* COMPETENCES BLOCK */
+.comp-block { background: var(--bg); border-radius: 8px; padding: 16px; }
+.comp-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.comp-block-header h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.badge-count {
+  background: var(--primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.comp-category { margin-bottom: 10px; }
+.comp-cat-name {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.comp-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.tag {
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tag.editable .remove {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+}
+.tag.editable .remove:hover { color: var(--danger); }
+.tag-matched { background: var(--success-light); border-color: var(--success); color: var(--success); }
+.tag-missing { background: var(--bg); color: var(--text-secondary); }
+
+.add-skill-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+.add-skill-row select {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.warning-msg {
+  background: var(--warning-light);
+  border-left: 3px solid var(--warning);
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: #7C2D12;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+/* RESULTS */
+.results-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.results-count { font-size: 13px; color: var(--text-secondary); }
+.results-count strong { color: var(--text); font-size: 18px; font-weight: 700; }
+.sort-control { display: flex; align-items: center; gap: 8px; }
+.sort-control label { font-size: 12px; color: var(--text-secondary); }
+.sort-control select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* OFFER CARDS */
+.offer-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.offer-card:hover {
+  border-color: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(15,23,42,0.06);
+}
+.offer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.offer-title-row { flex: 1; min-width: 0; }
+.offer-rank {
+  background: var(--primary-pale);
+  color: var(--primary);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+.offer-title { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.35; }
+.offer-company { color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
+
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.score-high { background: var(--success-light); color: var(--success); }
+.score-mid { background: var(--primary-pale); color: var(--primary); }
+.score-low { background: var(--warning-light); color: var(--warning); }
+
+.offer-summary {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.offer-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  margin-bottom: 10px;
+}
+.offer-skills { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.skill-mini {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.skill-mini.matched { background: var(--success-light); color: var(--success); }
+.skill-mini.missing { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); }
+.skill-mini.more { background: var(--primary-pale); color: var(--primary); font-weight: 600; }
+.offer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.source-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.source-kaggle { background: #FEF3C7; color: #92400E; }
+.source-adzuna { background: #EDE9FE; color: #6D28D9; }
+.source-france-travail { background: #DBEAFE; color: #1E40AF; }
+.source-rekrute { background: #FEE2E2; color: #991B1B; }
+.explication {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* MODAL */
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.5);
+  z-index: 100;
+  justify-content: flex-end;
+}
+.modal-bg.active { display: flex; }
+.modal {
+  background: var(--white);
+  width: 100%;
+  max-width: 620px;
+  height: 100vh;
+  overflow-y: auto;
+  animation: slideIn 0.2s ease-out;
+  padding: 28px;
+  position: relative;
+}
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-close:hover { background: var(--border); color: var(--text); }
+.modal h2 {
+  font-size: 20px;
+  margin-bottom: 4px;
+  padding-right: 40px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.modal-company { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
+
+.modal-section { margin-bottom: 22px; }
+.modal-section h4 {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+.modal-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: var(--bg);
+  padding: 14px;
+  border-radius: 8px;
+}
+.modal-info-item { font-size: 13px; }
+.modal-info-item strong { display: block; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; font-weight: 600; margin-bottom: 2px; }
+
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--primary-pale);
+  padding: 16px;
+  border-radius: 8px;
+}
+.score-big { font-size: 32px; font-weight: 700; color: var(--primary); line-height: 1; }
+.score-label { font-size: 13px; color: var(--text); }
+.modal-desc {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+.modal-desc.collapsed {
+  max-height: 280px;
+  overflow: hidden;
+  position: relative;
+}
+.modal-desc.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
+}
+.btn-toggle-desc {
+  margin-top: 10px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-toggle-desc:hover { background: var(--primary-pale); }
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  position: sticky;
+  bottom: 0;
+  background: var(--white);
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.modal-actions .btn { margin: 0; flex: 1; }
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--text);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.25s;
+}
+.toast.active { transform: translateY(0); opacity: 1; }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+
+/* STATES */
+.loader { display: none; text-align: center; padding: 60px; }
+.loader.active { display: block; }
+.spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { color: var(--text-secondary); font-size: 13px; }
+
+.empty {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-radius: 8px;
+}
+.empty-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.5; }
+.empty h3 { color: var(--text); font-size: 15px; margin-bottom: 4px; }
+
+.error {
+  background: var(--danger-light);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 11px 14px;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-content">
+    <div class="logo">Job<span>Intelligent</span></div>
+    <div class="stats-bar">
+      <div class="stat-item"><strong id="statOffres">—</strong>Offres data</div>
+      <div class="stat-item"><strong id="statSources">—</strong>Sources</div>
+      <div class="stat-item"><strong id="statVilles">—</strong>Villes</div>
+    </div>
+    <div class="header-nav">
+      <button class="nav-btn" onclick="showSavedOffers()">
+        ⭐ Mes sauvegardes <span class="count" id="savedCount">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="app" id="appLayout">
+
+  <aside class="sidebar" id="sidebar" style="display:none">
+    <h3>Filtres</h3>
+
+    <div class="filter-group">
+      <h3>Source</h3>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="kaggle" checked onchange="renderOffers()"> Kaggle</label>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="adzuna" checked onchange="renderOffers()"> Adzuna</label>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="france-travail" checked onchange="renderOffers()"> France Travail</label>
+      <label class="filter-label"><input type="checkbox" class="f-source" value="rekrute" checked onchange="renderOffers()"> Rekrute</label>
+    </div>
+
+    <div class="filter-group">
+      <h3>Type de travail</h3>
+      <label class="filter-label"><input type="checkbox" class="f-type" value="Onsite" checked onchange="renderOffers()"> Onsite</label>
+      <label class="filter-label"><input type="checkbox" class="f-type" value="Remote" checked onchange="renderOffers()"> Remote</label>
+      <label class="filter-label"><input type="checkbox" class="f-type" value="Hybrid" checked onchange="renderOffers()"> Hybrid</label>
+    </div>
+
+    <div class="filter-group">
+      <h3>Score minimum</h3>
+      <input type="range" id="fMinScore" min="0" max="100" value="0" oninput="document.getElementById('fMinScoreLabel').textContent=this.value;renderOffers()">
+      <div class="range-display"><span id="fMinScoreLabel">0</span>%</div>
+    </div>
+
+    <div class="filter-group">
+      <h3>Localisation</h3>
+      <input type="text" id="fVille" placeholder="Ex : Paris, London..." oninput="renderOffers()">
+    </div>
+
+    <button class="btn btn-secondary btn-sm btn-full" onclick="resetFilters()">Réinitialiser</button>
+  </aside>
+
+  <main class="main">
+
+    <div class="card" id="inputCard">
+      <h1>Trouvez les meilleures offres data pour votre profil</h1>
+      <p class="subtitle">Recommandation par TF-IDF et similarité cosinus sur 4 sources d'offres</p>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="text" onclick="switchTab('text')">✏️ Mes compétences</div>
+        <div class="tab" data-tab="cv" onclick="switchTab('cv')">📄 Importer CV</div>
+        <div class="tab" data-tab="search" onclick="switchTab('search')">🔍 Rechercher</div>
+      </div>
+
+      <div id="tabText" class="tab-content active">
+        <textarea id="profileInput" placeholder="Ex : Data Scientist avec Python, SQL, Machine Learning, TensorFlow. Je recherche un poste en data science avec du NLP."></textarea>
+        <button class="btn btn-full" onclick="rechercherTexte()">Lancer la recherche</button>
+      </div>
+
+      <div id="tabCv" class="tab-content">
+        <label class="file-upload" id="fileUploadLabel">
+          <input type="file" id="cvInput" accept=".pdf,.docx" onchange="onFileSelected()">
+          <div class="file-upload-icon">📄</div>
+          <div class="file-upload-text" id="fileText">Cliquez pour sélectionner votre CV</div>
+          <div class="file-upload-hint">PDF ou DOCX (max 5 Mo)</div>
+        </label>
+        <button class="btn btn-full" onclick="rechercherCV()">Analyser mon CV</button>
+      </div>
+
+      <div id="tabSearch" class="tab-content">
+        <div class="search-bar">
+          <input type="text" id="searchInput" placeholder="Titre, compétence, ville, entreprise...">
+          <button class="btn" onclick="rechercherKeyword()">Rechercher</button>
+        </div>
+        <p class="subtitle" style="margin-top:10px;margin-bottom:0">Recherche directe dans les 7 000+ offres du Data Warehouse</p>
+      </div>
+
+      <div id="errorBox"></div>
+    </div>
+
+    <div class="card" id="userCompCard" style="display:none">
+      <div class="comp-block-header">
+        <h3>Vos compétences détectées</h3>
+        <span class="badge-count" id="compCount">0</span>
+      </div>
+      <div id="userCompetencesBlock"></div>
+      <div class="add-skill-row">
+        <select id="addSkillSelect">
+          <option value="">+ Ajouter une compétence...</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="addSkill()">Ajouter</button>
+      </div>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <div class="loader-text" id="loaderText">Analyse en cours...</div>
+    </div>
+
+    <div id="resultsCard" class="card" style="display:none">
+      <div class="results-toolbar">
+        <div class="results-count"><strong id="resultsTotal">0</strong> offres trouvées</div>
+        <div class="sort-control">
+          <label>Trier :</label>
+          <select id="sortSelect" onchange="renderOffers()">
+            <option value="score">Score (décroissant)</option>
+            <option value="rang">Rang</option>
+            <option value="source">Source</option>
+            <option value="ville">Ville</option>
+          </select>
+        </div>
+      </div>
+      <div id="offersList"></div>
+    </div>
+
+    <div id="savedView" style="display:none" class="card">
+      <div class="results-toolbar">
+        <div class="results-count"><strong id="savedTotal">0</strong> offres sauvegardées</div>
+        <button class="btn btn-secondary btn-sm" onclick="hideSavedOffers()">← Retour aux résultats</button>
+      </div>
+      <div id="savedList"></div>
+    </div>
+
+  </main>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================================
+// État
+// ============================================================================
+let allOffers = [];
+let userSkills = [];
+let savedOffers = JSON.parse(localStorage.getItem('jobIntelligentSaved') || '[]');
+let taxonomy = {};
+
+// ============================================================================
+// Init
+// ============================================================================
+fetch('/api/stats').then(r => r.json()).then(d => {
+  document.getElementById('statOffres').textContent = d.nb_offres.toLocaleString();
+  document.getElementById('statSources').textContent = d.nb_sources;
+  document.getElementById('statVilles').textContent = d.nb_villes;
+  taxonomy = d.taxonomie || {};
+  fillAddSkillSelect();
+});
+updateSavedCount();
+
+function fillAddSkillSelect() {
+  const sel = document.getElementById('addSkillSelect');
+  sel.innerHTML = '<option value="">+ Ajouter une compétence...</option>';
+  for (const cat in taxonomy) {
+    const opt = document.createElement('optgroup');
+    opt.label = cat;
+    for (const skill of taxonomy[cat]) {
+      const o = document.createElement('option');
+      o.value = skill; o.textContent = skill;
+      opt.appendChild(o);
+    }
+    sel.appendChild(opt);
+  }
+}
+
+function updateSavedCount() {
+  document.getElementById('savedCount').textContent = savedOffers.length;
+}
+
+// ============================================================================
+// Tabs
+// ============================================================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+
+function onFileSelected() {
+  const input = document.getElementById('cvInput');
+  if (input.files.length) {
+    document.getElementById('fileUploadLabel').classList.add('has-file');
+    document.getElementById('fileText').textContent = '✓ ' + input.files[0].name;
+  }
+}
+
+// ============================================================================
+// Toast
+// ============================================================================
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast active ' + (type || '');
+  setTimeout(() => { t.classList.remove('active'); }, 2500);
+}
+
+// ============================================================================
+// UI helpers
+// ============================================================================
+function showLoader(show, text) {
+  document.getElementById('loader').classList.toggle('active', show);
+  document.getElementById('loaderText').textContent = text || 'Analyse en cours...';
+  if (show) {
+    document.getElementById('resultsCard').style.display = 'none';
+    document.getElementById('userCompCard').style.display = 'none';
+    document.getElementById('savedView').style.display = 'none';
+  }
+}
+function showError(msg) { document.getElementById('errorBox').innerHTML = '<div class="error">⚠️ ' + msg + '</div>'; }
+function clearError() { document.getElementById('errorBox').innerHTML = ''; }
+
+// ============================================================================
+// API
+// ============================================================================
+async function rechercherTexte() {
+  const profil = document.getElementById('profileInput').value.trim();
+  if (!profil) return showError('Veuillez saisir vos compétences.');
+  clearError(); showLoader(true, 'Analyse de votre profil...');
+  try {
+    const res = await fetch('/api/recommend', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({profile: profil, extra_skills: userSkills})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    afficherResultats(data);
+  } catch(e) { showError(e.message); }
+  showLoader(false);
+}
+
+async function rechercherCV() {
+  const input = document.getElementById('cvInput');
+  if (!input.files.length) return showError('Veuillez sélectionner un CV.');
+  clearError(); showLoader(true, 'Extraction et analyse du CV...');
+  try {
+    const formData = new FormData();
+    formData.append('cv', input.files[0]);
+    const res = await fetch('/api/upload-cv', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    afficherResultats(data);
+  } catch(e) { showError(e.message); }
+  showLoader(false);
+}
+
+async function rechercherKeyword() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return showError('Saisissez un mot-clé.');
+  clearError(); showLoader(true, 'Recherche en cours...');
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: q})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById('userCompCard').style.display = 'none';
+    userSkills = [];
+    afficherResultats(data, true);
+  } catch(e) { showError(e.message); }
+  showLoader(false);
+}
+
+// ============================================================================
+// Affichage résultats
+// ============================================================================
+function afficherResultats(data, isSearch = false) {
+  allOffers = data.recommandations || [];
+  document.getElementById('savedView').style.display = 'none';
+
+  if (!isSearch && data.competences) {
+    userSkills = data.competences;
+    renderUserCompetences(data.competences_par_categorie || {});
+    document.getElementById('userCompCard').style.display = 'block';
+    if (data.competences.length < 3) {
+      document.getElementById('userCompetencesBlock').innerHTML +=
+        '<div class="warning-msg">Peu de compétences détectées. Ajoutez-en manuellement pour améliorer les recommandations.</div>';
+    }
+  }
+
+  document.getElementById('resultsCard').style.display = 'block';
+  document.getElementById('sidebar').style.display = '';
+  document.getElementById('appLayout').classList.add('with-sidebar');
+  renderOffers();
+}
+
+function renderUserCompetences(parCat) {
+  const block = document.getElementById('userCompetencesBlock');
+  document.getElementById('compCount').textContent = userSkills.length;
+  let html = '';
+  for (const cat in parCat) {
+    if (!parCat[cat] || parCat[cat].length === 0) continue;
+    html += '<div class="comp-category"><div class="comp-cat-name">' + cat + '</div><div class="comp-tags">' +
+      parCat[cat].map(s => '<span class="tag editable">' + s +
+        '<span class="remove" onclick="removeSkill(\'' + s + '\')">×</span></span>').join('') +
+      '</div></div>';
+  }
+  block.innerHTML = html || '<div class="warning-msg">Aucune compétence détectée.</div>';
+}
+
+function rebuildCompetencesByCategory() {
+  const parCat = {};
+  for (const s of userSkills) {
+    let cat = 'Personnalisé';
+    for (const c in taxonomy) if (taxonomy[c].includes(s)) cat = c;
+    parCat[cat] = parCat[cat] || [];
+    parCat[cat].push(s);
+  }
+  renderUserCompetences(parCat);
+}
+
+function addSkill() {
+  const sel = document.getElementById('addSkillSelect');
+  if (!sel.value) return;
+  if (userSkills.includes(sel.value)) { toast('Compétence déjà présente', 'error'); return; }
+  userSkills.push(sel.value);
+  rebuildCompetencesByCategory();
+  sel.value = '';
+  toast('Compétence ajoutée', 'success');
+  const profil = document.getElementById('profileInput').value.trim();
+  if (profil) rechercherTexte();
+}
+
+function removeSkill(skill) {
+  userSkills = userSkills.filter(s => s !== skill);
+  rebuildCompetencesByCategory();
+  toast('Compétence retirée');
+}
+
+// ============================================================================
+// Filtres et tri
+// ============================================================================
+function resetFilters() {
+  document.querySelectorAll('.f-source,.f-type').forEach(c => c.checked = true);
+  document.getElementById('fMinScore').value = 0;
+  document.getElementById('fMinScoreLabel').textContent = '0';
+  document.getElementById('fVille').value = '';
+  renderOffers();
+}
+
+function getFiltered() {
+  const sources = [...document.querySelectorAll('.f-source:checked')].map(c => c.value);
+  const types = [...document.querySelectorAll('.f-type:checked')].map(c => c.value);
+  const minScore = parseFloat(document.getElementById('fMinScore').value);
+  const villeFilter = document.getElementById('fVille').value.trim().toLowerCase();
+  return allOffers.filter(o =>
+    sources.includes(o.source)
+    && types.includes(o.type_travail)
+    && (o.score_pct == null || o.score_pct >= minScore)
+    && (!villeFilter || (o.ville || '').toLowerCase().includes(villeFilter))
+  );
+}
+
+function renderOffers() {
+  let offers = getFiltered();
+  const sort = document.getElementById('sortSelect').value;
+  if (sort === 'score') offers.sort((a, b) => (b.score_pct || 0) - (a.score_pct || 0));
+  if (sort === 'rang') offers.sort((a, b) => a.rang - b.rang);
+  if (sort === 'source') offers.sort((a, b) => (a.source || '').localeCompare(b.source || ''));
+  if (sort === 'ville') offers.sort((a, b) => (a.ville || '').localeCompare(b.ville || ''));
+
+  document.getElementById('resultsTotal').textContent = offers.length;
+  document.getElementById('offersList').innerHTML = offers.length === 0
+    ? '<div class="empty"><div class="empty-icon">🔍</div><h3>Aucune offre ne correspond</h3><p>Essayez d\'élargir vos filtres.</p></div>'
+    : offers.map(o => offerCardHtml(o)).join('');
+}
+
+function offerCardHtml(o, isSavedView = false) {
+  const scoreClass = o.score_pct == null ? 'score-mid'
+    : o.score_pct >= 60 ? 'score-high'
+    : o.score_pct >= 30 ? 'score-mid'
+    : 'score-low';
+  const action = isSavedView ? 'openSavedDetail' : 'openModal';
+  return '<div class="offer-card" onclick="' + action + '(\'' + o.id_offre + '\')">' +
+    '<div class="offer-top"><div class="offer-title-row">' +
+      '<div>' + (o.rang ? '<span class="offer-rank">#' + o.rang + '</span>' : '') +
+      '<span class="offer-title">' + escapeHtml(o.titre) + '</span></div>' +
+      '<div class="offer-company">🏢 ' + escapeHtml(o.entreprise) + '</div></div>' +
+      (o.score_pct != null ? '<span class="score-badge ' + scoreClass + '">' + o.score_pct + '%</span>' : '') +
+    '</div>' +
+    '<div class="offer-summary">' + escapeHtml(o.resume) + '</div>' +
+    '<div class="offer-meta">' +
+      '<span>📍 ' + escapeHtml(o.ville) + ', ' + escapeHtml(o.pays) + '</span>' +
+      '<span>💼 ' + escapeHtml(o.type_travail) + '</span>' +
+      '<span>📋 ' + escapeHtml(o.type_contrat || 'N/A') + '</span>' +
+    '</div>' +
+    '<div class="offer-skills">' +
+      o.skills_matched.slice(0,5).map(s => '<span class="skill-mini matched">✓ ' + s + '</span>').join('') +
+      o.skills_missing.slice(0,3).map(s => '<span class="skill-mini missing">' + s + '</span>').join('') +
+      (o.skills_offre.length > 8 ? '<span class="skill-mini more">+' + (o.skills_offre.length - 8) + '</span>' : '') +
+    '</div>' +
+    '<div class="offer-footer">' +
+      '<span class="source-badge source-' + o.source + '">' + o.source + '</span>' +
+      '<span class="explication">' + escapeHtml(o.explication) + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+// ============================================================================
+// Modal détail
+// ============================================================================
+function openModal(idOffre) {
+  const o = allOffers.find(x => x.id_offre === idOffre);
+  if (!o) return;
+  renderModal(o, false);
+}
+
+function openSavedDetail(idOffre) {
+  const o = savedOffers.find(x => x.id_offre === idOffre);
+  if (!o) return;
+  renderModal(o, true);
+}
+
+function renderModal(o, fromSaved) {
+  const isSaved = savedOffers.some(x => x.id_offre === o.id_offre);
+  const scoreClass = o.score_pct == null ? 'score-mid'
+    : o.score_pct >= 60 ? 'score-high'
+    : o.score_pct >= 30 ? 'score-mid'
+    : 'score-low';
+
+  document.getElementById('modalContent').innerHTML =
+    '<h2>' + escapeHtml(o.titre) + '</h2>' +
+    '<div class="modal-company">🏢 ' + escapeHtml(o.entreprise) + '</div>' +
+
+    (o.score_pct != null ?
+      '<div class="modal-section"><h4>Score de matching</h4>' +
+        '<div class="score-display"><div class="score-big">' + o.score_pct + '%</div>' +
+        '<div class="score-label">' + escapeHtml(o.explication) + '</div></div></div>' : '') +
+
+    '<div class="modal-section"><h4>Informations</h4>' +
+      '<div class="modal-info-grid">' +
+        '<div class="modal-info-item"><strong>Localisation</strong>📍 ' + escapeHtml(o.ville) + ', ' + escapeHtml(o.pays) + '</div>' +
+        '<div class="modal-info-item"><strong>Mode</strong>💼 ' + escapeHtml(o.type_travail) + '</div>' +
+        '<div class="modal-info-item"><strong>Contrat</strong>📋 ' + escapeHtml(o.type_contrat || 'N/A') + '</div>' +
+        '<div class="modal-info-item"><strong>Source</strong>🌐 ' + escapeHtml(o.source) + '</div>' +
+      '</div></div>' +
+
+    (o.skills_matched && o.skills_matched.length > 0 ?
+      '<div class="modal-section"><h4>✅ Compétences qui matchent (' + o.skills_matched.length + ')</h4>' +
+        '<div class="comp-tags">' + o.skills_matched.map(s => '<span class="tag tag-matched">' + s + '</span>').join('') + '</div></div>' : '') +
+
+    (o.skills_missing && o.skills_missing.length > 0 ?
+      '<div class="modal-section"><h4>📌 À acquérir (' + o.skills_missing.length + ')</h4>' +
+        '<div class="comp-tags">' + o.skills_missing.map(s => '<span class="tag tag-missing">' + s + '</span>').join('') + '</div></div>' : '') +
+
+    '<div class="modal-section"><h4>Description complète</h4>' +
+      (o.description && o.description.trim()
+        ? (o.description.length > 400
+            ? '<div class="modal-desc collapsed" id="descBox">' + escapeHtml(o.description) + '</div>' +
+              '<button class="btn-toggle-desc" onclick="toggleDesc()" id="toggleDescBtn">▼ Voir la description complète</button>'
+            : '<div class="modal-desc">' + escapeHtml(o.description) + '</div>')
+        : '<div class="modal-desc" style="background:#FFF7ED;border-left:3px solid #EA580C;color:#7C2D12;font-style:italic">📌 La description complète n\'est pas fournie par cette source (<strong>' + o.source + '</strong>). Consultez l\'annonce originale.</div>') +
+    '</div>' +'<div class="modal-section"><h4>Description complète</h4>' +
+      (o.description && o.description.trim()
+        ? '<div class="modal-desc">' + escapeHtml(o.description) + '</div>'
+        : '<div class="modal-desc" style="background:#FFF7ED;border-left:3px solid #EA580C;color:#7C2D12;font-style:italic">📌 La description complète n\'est pas fournie par cette source (<strong>' + o.source + '</strong>). Consultez l\'annonce originale sur la plateforme pour plus de détails.</div>') +
+    '</div>' +
+
+    '<div class="modal-actions">' +
+      '<button class="btn ' + (isSaved ? 'btn-secondary' : 'btn-success') + '" id="saveBtnModal" onclick="toggleSaveModal(\'' + o.id_offre + '\')">' +
+        (isSaved ? '⭐ Sauvegardée' : '☆ Sauvegarder') + '</button>' +
+      '<button class="btn btn-secondary" onclick="closeModal()">Fermer</button>' +
+    '</div>';
+
+  document.getElementById('modalBg').classList.add('active');
+  document.getElementById('modalBg').style.display = 'flex';
+}
+
+function closeModal(e) {
+  if (e && e.target.id !== 'modalBg' && e.target.className !== 'modal-close') {
+    if (e.type === 'click' && e.target.id !== 'modalBg') return;
+  }
+  if (e && e.target.id && e.target.id !== 'modalBg') {
+    // Bouton close
+    if (!e.target.classList.contains('modal-close')) return;
+  }
+  document.getElementById('modalBg').classList.remove('active');
+  document.getElementById('modalBg').style.display = 'none';
+}
+
+// ============================================================================
+// Sauvegardes
+// ============================================================================
+function toggleSaveModal(idOffre) {
+  const existing = savedOffers.findIndex(x => x.id_offre === idOffre);
+  if (existing >= 0) {
+    savedOffers.splice(existing, 1);
+    toast('Offre retirée des sauvegardes');
+  } else {
+    const offer = allOffers.find(x => x.id_offre === idOffre) || savedOffers.find(x => x.id_offre === idOffre);
+    if (!offer) return;
+    savedOffers.push(offer);
+    toast('Offre sauvegardée avec succès', 'success');
+  }
+  localStorage.setItem('jobIntelligentSaved', JSON.stringify(savedOffers));
+  updateSavedCount();
+
+  // Mettre à jour le bouton dans le modal
+  const isSaved = savedOffers.some(x => x.id_offre === idOffre);
+  const btn = document.getElementById('saveBtnModal');
+  if (btn) {
+    btn.textContent = isSaved ? '⭐ Sauvegardée' : '☆ Sauvegarder';
+    btn.className = 'btn ' + (isSaved ? 'btn-secondary' : 'btn-success');
+  }
+}
+
+function showSavedOffers() {
+  document.getElementById('inputCard').style.display = 'none';
+  document.getElementById('userCompCard').style.display = 'none';
+  document.getElementById('resultsCard').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('appLayout').classList.remove('with-sidebar');
+  document.getElementById('savedView').style.display = 'block';
+
+  document.getElementById('savedTotal').textContent = savedOffers.length;
+  document.getElementById('savedList').innerHTML = savedOffers.length === 0
+    ? '<div class="empty"><div class="empty-icon">⭐</div><h3>Aucune offre sauvegardée</h3><p>Cliquez sur ☆ Sauvegarder dans le détail d\'une offre.</p></div>'
+    : savedOffers.map(o => offerCardHtml(o, true)).join('');
+}
+
+function hideSavedOffers() {
+  document.getElementById('savedView').style.display = 'none';
+  document.getElementById('inputCard').style.display = 'block';
+  if (allOffers.length > 0) {
+    document.getElementById('resultsCard').style.display = 'block';
+    document.getElementById('sidebar').style.display = '';
+    document.getElementById('appLayout').classList.add('with-sidebar');
+    if (userSkills.length > 0) document.getElementById('userCompCard').style.display = 'block';
+  }
+}
+function toggleDesc() {
+  const box = document.getElementById('descBox');
+  const btn = document.getElementById('toggleDescBtn');
+  if (box.classList.contains('collapsed')) {
+    box.classList.remove('collapsed');
+    btn.textContent = '▲ Voir moins';
+  } else {
+    box.classList.add('collapsed');
+    btn.textContent = '▼ Voir la description complète';
+  }
+}
+
+function escapeHtml(t) {
+  const div = document.createElement('div');
+  div.textContent = t == null ? '' : String(t);
+  return div.innerHTML;
+}
+
+document.getElementById('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') rechercherKeyword(); });
+</script>
+</body>
+</html>
