@@ -17,7 +17,7 @@ if not CLIENT_ID or not CLIENT_SECRET:
     print("❌ ERREUR : CLIENT_ID ou CLIENT_SECRET manquant dans .env")
     exit(1)
 
-print(f"✅ Identifiants chargés (client_id commence par : {CLIENT_ID[:20]}...)")
+print("✅ Identifiants chargés depuis l environnement")
 
 # 2. Obtenir un token d'accès (OAuth2)
 print("\n🔑 Récupération du token d'accès...")

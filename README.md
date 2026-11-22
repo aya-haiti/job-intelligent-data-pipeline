@@ -79,3 +79,26 @@ Bronze
 Silver
    ↓
 Gold
+
+
+## Web dashboard (deployment)
+
+The Flask interface (`interface/`) is a job-market analytics dashboard plus CV ↔ job matching.
+`app.py` at the repository root is the entry point used by Vercel.
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `DATABASE_URL` | Vercel project env (server-side) | Postgres (Neon) holding table `jobs_clean` |
+| `JOBS_CSV_PATH` | local only | Alternative: read a CSV instead of Postgres |
+
+Load the processed offers into Postgres once (or from a scheduled job):
+
+```bash
+DATABASE_URL=postgresql://... python scripts/load_jobs_to_postgres.py data/processed/all_jobs_clean.csv
+```
+
+Run locally: `pip install -r requirements.txt && python app.py` → http://127.0.0.1:5000
+Tests: `python -m pytest tests`.
+
+Secrets live only in `.env` (git-ignored, see `.env.example`) or in the hosting provider's
+environment settings. Never commit API keys.

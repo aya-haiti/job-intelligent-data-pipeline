@@ -1,0 +1,11 @@
+.venv
+dags
+logs
+data
+tests
+docker-compose.yml
+test_minio.py
+minio_client.py
+scripts/scrapers
+scripts/sql
+*.md
