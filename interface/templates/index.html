@@ -160,6 +160,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
       </div>
     </div>
 
+    <div id="warmup" class="notice" hidden role="status" style="margin-top:16px">⏳ Le serveur prépare l'index de matching (chargement des offres et calcul TF-IDF). Cela peut prendre jusqu'à 30 secondes au premier démarrage ; les requêtes suivantes sont immédiates.</div>
     <div id="results" aria-live="polite"></div>
   </section>
 
@@ -324,8 +325,9 @@ function renderMarket(){
     'Le score TF-IDF mesure une proximité lexicale, pas une adéquation garantie.'
   ].filter(Boolean).map(x=>`<li>${x}</li>`).join('');
 }
-fetch('/api/analytics').then(r=>r.json()).then(d=>{A=d;renderMarket();if(!$('#p-market').hidden)drawMarket();
-  if(d.nb_offres)$('#lead').textContent=`Importez votre CV ou décrivez votre profil : ${nf(d.nb_offres)} offres réelles sont comparées à votre texte, avec un score expliqué, les compétences que vous avez et celles qui vous manquent.`;}).catch(()=>renderMarket());
+const warm=setTimeout(()=>{$('#warmup').hidden=false;},1500);
+fetch('/api/analytics').then(r=>r.json()).then(d=>{clearTimeout(warm);$('#warmup').hidden=true;A=d;renderMarket();if(!$('#p-market').hidden)drawMarket();
+  if(d.nb_offres)$('#lead').textContent=`Importez votre CV ou décrivez votre profil : ${nf(d.nb_offres)} offres réelles sont comparées à votre texte, avec un score expliqué, les compétences que vous avez et celles qui vous manquent.`;}).catch(()=>{clearTimeout(warm);$('#warmup').hidden=true;renderMarket();});
 </script>
 </body>
 </html>

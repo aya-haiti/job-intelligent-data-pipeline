@@ -8,6 +8,8 @@ un champ absent de la source est renvoyé vide et affiché comme « non fourni �
 import os
 import sys
 import tempfile
+import threading
+import time
 from collections import Counter
 
 import pandas as pd
@@ -30,24 +32,51 @@ PAGE = 20              # cartes renvoyées par page
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # CV : 5 Mo max
 
-raw, DATA_SOURCE = load_offres()
-df_offres = normaliser(raw)
-df_offres["texte_complet"] = df_offres["titre"] + " " + df_offres["description"]
-if (df_offres["competences"] != "").any():
-    # Pré-calculé par l'ETL (scripts/etl/transform.py)
-    df_offres["skills"] = df_offres["competences"].apply(lambda s: [x for x in s.split("|") if x])
-else:
-    df_offres["skills"] = (df_offres["texte_complet"] + " " + df_offres["competences_source"]).apply(
-        lambda t: sorted(set(extract_skills_from_text(t))))
-df_offres["nb_skills"] = df_offres["skills"].apply(len)
-INDEX_BY_ID = {oid: i for i, oid in enumerate(df_offres["id_offre"])}
+# Characters of each description used to build the TF-IDF index. The full text is still stored
+# and returned by /api/offre/<id>; truncating only the index keeps a serverless cold start short.
+INDEX_CHARS = int(os.getenv("INDEX_CHARS", "2000"))
 
+df_offres = pd.DataFrame()
+INDEX_BY_ID = {}
 recommandeur = None
-if len(df_offres):
-    recommandeur = RecommandeurOffres()
-    recommandeur.entrainer(df_offres)
+DATA_SOURCE = "non chargée"
+ANALYTICS = {"nb_offres": 0}
+_lock = threading.Lock()
+_loaded = False
 
-print(f"[job-intelligent] {len(df_offres)} offres chargées (source : {DATA_SOURCE})")
+
+def _load():
+    """Loads offers and trains the TF-IDF index once per process (lazy: the HTML page never waits)."""
+    global df_offres, INDEX_BY_ID, recommandeur, DATA_SOURCE, ANALYTICS, _loaded
+    t0 = time.time()
+    raw, DATA_SOURCE = load_offres()
+    df = normaliser(raw)
+    df["texte_complet"] = df["titre"] + " " + df["description"]
+    if (df["competences"] != "").any():
+        # Pré-calculé par l'ETL (scripts/etl/transform.py)
+        df["skills"] = df["competences"].apply(lambda s: [x for x in s.split("|") if x])
+    else:
+        df["skills"] = (df["texte_complet"] + " " + df["competences_source"]).apply(
+            lambda t: sorted(set(extract_skills_from_text(t))))
+    df["nb_skills"] = df["skills"].apply(len)
+    df_offres = df
+    INDEX_BY_ID = {oid: i for i, oid in enumerate(df["id_offre"])}
+    if len(df):
+        rec = RecommandeurOffres()
+        index_df = df[["id_offre", "titre", "entreprise", "ville", "pays", "type_contrat", "source", "description"]].copy()
+        index_df["description"] = index_df["description"].str[:INDEX_CHARS]
+        rec.entrainer(index_df)
+        recommandeur = rec
+    ANALYTICS = compute_analytics()
+    _loaded = True
+    print(f"[job-intelligent] {len(df)} offres chargées (source : {DATA_SOURCE}) en {time.time() - t0:.1f}s")
+
+
+def ensure_loaded():
+    if not _loaded:
+        with _lock:
+            if not _loaded:
+                _load()
 
 LIEN_LIBELLE = {
     "active": "Offre en ligne (vérifiée le {d})",
@@ -217,12 +246,15 @@ def compute_analytics():
     }
 
 
-ANALYTICS = compute_analytics()
-
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+@app.before_request
+def _load_for_api():
+    if request.path.startswith("/api/"):
+        ensure_loaded()
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -295,7 +327,9 @@ def upload_cv():
         res["filename"] = nom
         res["profil_texte"] = texte[:20000]  # renvoyé pour pouvoir re-trier sans ré-envoyer le fichier
         return jsonify(res)
-    except Exception:
+    except Exception as exc:
+        if exc.__class__.__name__ in ("PdfReadError", "PackageNotFoundError", "BadZipFile"):
+            return jsonify({"error": "Fichier illisible : vérifiez qu'il s'agit d'un PDF ou DOCX valide."}), 422
         app.logger.exception("Erreur lecture CV")
         return jsonify({"error": "Le fichier n'a pas pu être analysé."}), 500
     finally:
