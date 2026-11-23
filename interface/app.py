@@ -1,16 +1,17 @@
 """
-Job Intelligent — Backend Flask (v4 : tableau de bord + recommandation)
+Job Intelligent — Backend Flask (v5 : matching CV ↔ offres + tableau de bord)
 
-Toutes les statistiques sont calculées à partir des offres réellement collectées
-par le pipeline (Kaggle, Adzuna, France Travail, Rekrute). Aucune valeur n'est simulée.
+Toutes les données proviennent des offres réellement collectées par le pipeline
+(Kaggle/LinkedIn, Adzuna, France Travail, Rekrute). Aucune valeur n'est simulée :
+un champ absent de la source est renvoyé vide et affiché comme « non fourni ».
 """
 import os
 import sys
 import tempfile
 from collections import Counter
-from itertools import combinations
 
-from flask import Flask, jsonify, render_template, request
+import pandas as pd
+from flask import Flask, abort, jsonify, render_template, request
 from werkzeug.utils import secure_filename
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +24,8 @@ from recommandation import RecommandeurOffres  # noqa: E402
 from recommandation_cv import extraire_competences_cv, lire_cv  # noqa: E402
 
 ALLOWED_CV = {".pdf", ".docx"}
-MAX_TOP_N = 500
+TOP_N = 300            # offres candidates évaluées par requête
+PAGE = 20              # cartes renvoyées par page
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # CV : 5 Mo max
@@ -31,7 +33,12 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # CV : 5 Mo max
 raw, DATA_SOURCE = load_offres()
 df_offres = normaliser(raw)
 df_offres["texte_complet"] = df_offres["titre"] + " " + df_offres["description"]
-df_offres["skills"] = df_offres["texte_complet"].apply(extract_skills_from_text)
+if (df_offres["competences"] != "").any():
+    # Pré-calculé par l'ETL (scripts/etl/transform.py)
+    df_offres["skills"] = df_offres["competences"].apply(lambda s: [x for x in s.split("|") if x])
+else:
+    df_offres["skills"] = (df_offres["texte_complet"] + " " + df_offres["competences_source"]).apply(
+        lambda t: sorted(set(extract_skills_from_text(t))))
 df_offres["nb_skills"] = df_offres["skills"].apply(len)
 INDEX_BY_ID = {oid: i for i, oid in enumerate(df_offres["id_offre"])}
 
@@ -42,62 +49,71 @@ if len(df_offres):
 
 print(f"[job-intelligent] {len(df_offres)} offres chargées (source : {DATA_SOURCE})")
 
+LIEN_LIBELLE = {
+    "active": "Offre en ligne (vérifiée le {d})",
+    "expiree": "Offre clôturée sur le site d'origine (vérifié le {d})",
+    "non_verifiable": "Lien d'origine conservé ; le site bloque les vérifications automatiques, l'offre peut avoir expiré",
+    "absente": "Lien d'origine non conservé lors de la collecte",
+}
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-def detecter_type_travail(texte):
-    t = str(texte).lower()
+def detecter_type_travail(row):
+    if row["type_travail"]:
+        return row["type_travail"]
+    t = row["texte_complet"].lower()
     if any(k in t for k in ("remote", "teletravail", "télétravail", "telework", "work from home")):
         return "Remote"
     if "hybrid" in t or "hybride" in t:
         return "Hybrid"
-    return "Onsite"
+    return ""
 
 
-def construire_resume(titre, description, max_len=180):
-    desc = str(description or "").strip()
-    if not desc or desc.lower() in ("nan", "none"):
-        return ""
-    desc = " ".join(desc.split())
-    if len(desc) <= max_len:
-        return desc
-    return desc[:max_len].rsplit(" ", 1)[0] + "…"
+def date_str(d):
+    return d.strftime("%Y-%m-%d") if isinstance(d, pd.Timestamp) and not pd.isna(d) else ""
 
 
-def enrichir_offre(row, user_skills_set, score_pct=None, rang=None):
-    offer_skills = row["skills"] if isinstance(row["skills"], list) else []
-    matched = [s for s in offer_skills if s in user_skills_set]
-    missing = [s for s in offer_skills if s not in user_skills_set]
-    if len(matched) >= 3:
-        explication = f"Très bon match : {len(matched)} compétences communes avec votre profil"
-    elif matched:
-        explication = f"Cette offre correspond à {len(matched)} de vos compétences"
-    else:
-        explication = "Match basé sur la similarité du texte (TF-IDF)"
-    date = row["date_publication"]
-    return {
-        "rang": rang,
-        "score_pct": score_pct,
+def lien_info(row):
+    statut = row["lien_statut"] or ("absente" if not row["lien"] else "non_verifiable")
+    return statut, LIEN_LIBELLE[statut].format(d=row["lien_verifie_le"] or "?")
+
+
+def carte(row, user_skills=None, score=None):
+    """Données d'une carte de résultat (sans la description complète)."""
+    statut, libelle = lien_info(row)
+    offre_skills = row["skills"]
+    out = {
         "id_offre": row["id_offre"],
         "titre": row["titre"],
         "entreprise": row["entreprise"],
         "ville": row["ville"],
         "pays": row["pays"],
         "type_contrat": row["type_contrat"],
-        "type_travail": detecter_type_travail(row["texte_complet"]),
+        "type_travail": detecter_type_travail(row),
+        "niveau": row["niveau"],
+        "salaire": row["salaire"],
         "source": row["source"],
-        "lien": row["lien"] if str(row["lien"]).startswith(("http://", "https://")) else "",
-        "date_publication": date.strftime("%Y-%m-%d") if hasattr(date, "strftime") and date == date else None,
-        "description": row["description"],
-        "resume": construire_resume(row["titre"], row["description"]),
-        "skills_offre": offer_skills,
-        "skills_matched": matched,
-        "skills_missing": missing,
-        "nb_matched": len(matched),
-        "nb_missing": len(missing),
-        "explication": explication,
+        "date_publication": date_str(row["date_publication"]),
+        "lien": row["lien"],
+        "lien_statut": statut,
+        "lien_libelle": libelle,
+        "a_description": bool(row["description"]),
+        "extrait": " ".join(row["description"].split())[:260],
+        "skills_offre": offre_skills,
     }
+    if user_skills is not None:
+        matched = [s for s in offre_skills if s in user_skills]
+        missing = [s for s in offre_skills if s not in user_skills]
+        couverture = round(100 * len(matched) / len(offre_skills)) if offre_skills else None
+        out.update({
+            "score_pct": score,
+            "skills_matched": matched,
+            "skills_missing": missing,
+            "couverture_pct": couverture,
+        })
+    return out
 
 
 def grouper(competences):
@@ -107,26 +123,55 @@ def grouper(competences):
     return out
 
 
-def recommander(texte, competences):
-    resultats = recommandeur.recommander(texte, top_n=MAX_TOP_N)
+def recommander(texte, competences, tri="pertinence", source=None, page=1):
+    resultats = recommandeur.recommander(texte, top_n=TOP_N)
     user = set(competences)
-    offres = []
+    cartes = []
     for _, r in resultats.iterrows():
         if r["score_pct"] <= 0:
             continue
-        full = df_offres.iloc[INDEX_BY_ID[r["id_offre"]]]
-        offres.append(enrichir_offre(full, user, score_pct=float(r["score_pct"]), rang=int(r["rang"])))
-    return offres
+        row = df_offres.iloc[INDEX_BY_ID[r["id_offre"]]]
+        cartes.append(carte(row, user, float(r["score_pct"])))
+    sources = Counter(c["source"] for c in cartes)
+    if source:
+        cartes = [c for c in cartes if c["source"] == source]
+    if tri == "competences":
+        cartes.sort(key=lambda c: (len(c["skills_matched"]), c["score_pct"]), reverse=True)
+    elif tri == "date":
+        cartes.sort(key=lambda c: c["date_publication"], reverse=True)
+    total = len(cartes)
+    debut = (max(page, 1) - 1) * PAGE
+    return {
+        "competences": sorted(competences),
+        "competences_par_categorie": grouper(competences),
+        "sources": dict(sources),
+        "total": total,
+        "page": page,
+        "pages": max(1, -(-total // PAGE)),
+        "recommandations": cartes[debut:debut + PAGE],
+        "methode": ("Similarité cosinus TF-IDF (unigrammes + bigrammes, titre pondéré ×3) entre votre profil "
+                    "et le texte de chaque offre, sur les " + str(TOP_N) + " offres les plus proches. "
+                    "Les compétences communes sont détectées avec la même taxonomie des deux côtés."),
+    }
+
+
+def params():
+    data = request.get_json(silent=True) or request.form
+    tri = data.get("tri") if data.get("tri") in ("pertinence", "competences", "date") else "pertinence"
+    try:
+        page = int(data.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    return data, tri, (data.get("source") or None), page
 
 
 def no_data():
-    return jsonify({"error": "Aucune offre chargée sur ce serveur. Configurez DATABASE_URL ou JOBS_CSV_PATH."}), 503
+    return jsonify({"error": "Aucune offre chargée sur ce serveur."}), 503
 
 
-def top(counter_or_series, n):
-    items = counter_or_series.most_common(n) if isinstance(counter_or_series, Counter) \
-        else list(counter_or_series.head(n).items())
-    return [{"label": str(k), "value": int(v)} for k, v in items]
+def top(items, n):
+    pairs = items.most_common(n) if isinstance(items, Counter) else list(items.head(n).items())
+    return [{"label": str(k), "value": int(v)} for k, v in pairs]
 
 
 def compute_analytics():
@@ -138,55 +183,38 @@ def compute_analytics():
     for lst in df["skills"]:
         for cat in {SKILL_TO_CATEGORY.get(s, "Autre") for s in lst}:
             cat_counter[cat] += 1
-    pairs = Counter()
-    for lst in df["skills"]:
-        for a, b in combinations(sorted(set(lst)), 2):
-            pairs[(a, b)] += 1
-    villes = df.loc[~df["ville"].str.lower().isin(["", "nan", "non precise", "non précisé"]), "ville"]
-    entreprises = df.loc[~df["entreprise"].str.lower().isin(["", "nan", "non precise", "non précisé"]), "entreprise"]
-    work = df["texte_complet"].apply(detecter_type_travail).value_counts()
-    dated = df.dropna(subset=["date_publication"])
-    by_month = dated.groupby([dated["date_publication"].dt.to_period("M"), "source"]).size()
-    months = sorted({str(p) for p, _ in by_month.index})
-    sources = sorted(df["source"].unique())
-    timeline = {s: [int(by_month.get((pd_period(m), s), 0)) for m in months] for s in sources}
+    pays = df.loc[df["pays"] != "", "pays"]
+    villes = df.loc[df["ville"] != "", "ville"]
+    work = df.apply(detecter_type_travail, axis=1)
+    work = work[work != ""].value_counts()
 
-    per_source_skills = {}
-    for s in sources:
-        c = Counter(x for lst in df.loc[df["source"] == s, "skills"] for x in lst)
-        per_source_skills[s] = top(c, 10)
-
-    with_skills = int((df["nb_skills"] > 0).sum())
+    sources = []
+    for s, g in df.groupby("source"):
+        d = g["date_publication"].dropna()
+        sources.append({
+            "source": s, "offres": int(len(g)),
+            "debut": date_str(d.min()) if len(d) else "", "fin": date_str(d.max()) if len(d) else "",
+            "avec_description": int((g["description"] != "").sum()),
+            "avec_lien": int((g["lien"] != "").sum()),
+            "liens_actifs": int((g["lien_statut"] == "active").sum()),
+            "avec_salaire": int((g["salaire"] != "").sum()),
+        })
+    sources.sort(key=lambda x: -x["offres"])
     return {
         "nb_offres": int(len(df)),
         "nb_sources": int(df["source"].nunique()),
-        "nb_entreprises": int(entreprises.nunique()),
-        "nb_villes": int(villes.nunique()),
-        "nb_pays": int(df["pays"].nunique()),
-        "offres_avec_competences": with_skills,
-        "competences_moyennes": round(float(df.loc[df["nb_skills"] > 0, "nb_skills"].mean() or 0), 2),
-        "periode": {
-            "debut": dated["date_publication"].min().strftime("%Y-%m-%d") if len(dated) else None,
-            "fin": dated["date_publication"].max().strftime("%Y-%m-%d") if len(dated) else None,
-        },
-        "sources": top(df["source"].value_counts(), 10),
-        "pays": top(df["pays"].value_counts(), 10),
-        "villes": top(villes.value_counts(), 15),
-        "entreprises": top(entreprises.value_counts(), 15),
-        "contrats": top(df["type_contrat"].value_counts(), 8),
+        "nb_entreprises": int(df.loc[df["entreprise"] != "", "entreprise"].nunique()),
+        "nb_pays": int(pays.nunique()),
+        "offres_avec_competences": int((df["nb_skills"] > 0).sum()),
+        "offres_avec_description": int((df["description"] != "").sum()),
+        "sources": sources,
+        "competences": top(skills_all, 15),
+        "categories": top(cat_counter, 8),
+        "pays": top(pays.value_counts(), 8),
+        "villes": top(villes.value_counts(), 10),
         "type_travail": top(work, 3),
-        "competences": top(skills_all, 25),
-        "categories": top(cat_counter, 12),
-        "paires": [{"label": f"{a} + {b}", "value": int(v)} for (a, b), v in pairs.most_common(12)],
-        "competences_par_source": per_source_skills,
-        "timeline": {"mois": months, "series": timeline},
         "data_source": DATA_SOURCE,
     }
-
-
-def pd_period(m):
-    import pandas as pd
-    return pd.Period(m, freq="M")
 
 
 ANALYTICS = compute_analytics()
@@ -205,36 +233,42 @@ def health():
     return jsonify({"status": "ok", "offres": int(len(df_offres)), "source": DATA_SOURCE})
 
 
+@app.route("/api/analytics")
+def analytics():
+    return jsonify(ANALYTICS)
+
+
 @app.route("/api/stats")
 def stats():
     return jsonify({
         "nb_offres": int(len(df_offres)),
-        "nb_sources": int(df_offres["source"].nunique()),
-        "sources": {k: int(v) for k, v in df_offres["source"].value_counts().items()},
-        "nb_pays": int(df_offres["pays"].nunique()),
-        "nb_villes": int(df_offres["ville"].nunique()),
         "taxonomie": {cat: list(skills.keys()) for cat, skills in SKILLS_TAXONOMY.items()},
     })
 
 
-@app.route("/api/analytics")
-def analytics():
-    return jsonify(ANALYTICS)
+@app.route("/api/offre/<path:id_offre>")
+def offre(id_offre):
+    i = INDEX_BY_ID.get(id_offre)
+    if i is None:
+        abort(404)
+    row = df_offres.iloc[i]
+    data = carte(row)
+    data["description"] = row["description"]
+    data["skills_par_categorie"] = grouper(row["skills"])
+    return jsonify(data)
 
 
 @app.route("/api/recommend", methods=["POST"])
 def recommend():
     if recommandeur is None:
         return no_data()
-    data = request.get_json(silent=True) or {}
+    data, tri, source, page = params()
     profil = str(data.get("profile") or "").strip()[:20000]
-    extra = [s for s in (data.get("extra_skills") or []) if isinstance(s, str)][:50]
-    if not profil:
-        return jsonify({"error": "Profil vide"}), 400
-    competences = sorted(set(extract_skills_from_text(profil) + extra))
-    offres = recommander(profil + " " + " ".join(extra), competences)
-    return jsonify({"competences": competences, "competences_par_categorie": grouper(competences),
-                    "recommandations": offres, "total": len(offres)})
+    if len(profil) < 3:
+        return jsonify({"error": "Décrivez votre profil (compétences, poste visé, expériences)."}), 400
+    # mode "cv" : texte extrait d'un CV déjà importé (re-tri / pagination sans renvoyer le fichier)
+    competences = set(extraire_competences_cv(profil) if data.get("mode") == "cv" else extract_skills_from_text(profil))
+    return jsonify(recommander(profil, competences, tri, source, page))
 
 
 @app.route("/api/upload-cv", methods=["POST"])
@@ -243,27 +277,27 @@ def upload_cv():
         return no_data()
     fichier = request.files.get("cv")
     if not fichier or not fichier.filename:
-        return jsonify({"error": "Aucun fichier"}), 400
-    nom = secure_filename(fichier.filename)
-    ext = os.path.splitext(nom)[1].lower()
+        return jsonify({"error": "Aucun fichier reçu."}), 400
+    nom = secure_filename(fichier.filename) or "cv"
+    ext = os.path.splitext(fichier.filename)[1].lower()
     if ext not in ALLOWED_CV:
-        return jsonify({"error": "Format accepté : PDF ou DOCX"}), 400
-
-    fd, chemin = tempfile.mkstemp(suffix=ext)  # /tmp, compatible serverless
+        return jsonify({"error": "Format accepté : PDF ou DOCX."}), 400
+    _, tri, source, page = params()
+    fd, chemin = tempfile.mkstemp(suffix=ext)  # /tmp : compatible serverless
     os.close(fd)
     try:
         fichier.save(chemin)
         texte = lire_cv(chemin)
-        if not texte or not texte.strip():
-            return jsonify({"error": "Impossible d'extraire du texte de ce fichier"}), 422
-        competences = sorted(set(extraire_competences_cv(texte)))
-        offres = recommander(texte, competences)
-        return jsonify({"filename": nom, "competences": competences,
-                        "competences_par_categorie": grouper(competences),
-                        "recommandations": offres, "total": len(offres)})
+        if not texte or len(texte.strip()) < 20:
+            return jsonify({"error": "Impossible d'extraire du texte de ce fichier (CV scanné en image ?)."}), 422
+        competences = set(extraire_competences_cv(texte))
+        res = recommander(texte, competences, tri, source, page)
+        res["filename"] = nom
+        res["profil_texte"] = texte[:20000]  # renvoyé pour pouvoir re-trier sans ré-envoyer le fichier
+        return jsonify(res)
     except Exception:
         app.logger.exception("Erreur lecture CV")
-        return jsonify({"error": "Le fichier n'a pas pu être analysé"}), 500
+        return jsonify({"error": "Le fichier n'a pas pu être analysé."}), 500
     finally:
         if os.path.exists(chemin):
             os.remove(chemin)
@@ -281,14 +315,18 @@ def search():
         | df_offres["entreprise"].str.lower().str.contains(query, na=False, regex=False)
         | df_offres["skills"].apply(lambda lst: any(query == s.lower() for s in lst))
     )
-    matched = df_offres[mask].head(100)
-    offres = [enrichir_offre(row, set(), rang=i) for i, (_, row) in enumerate(matched.iterrows(), 1)]
-    return jsonify({"recommandations": offres, "total": int(mask.sum())})
+    matched = df_offres[mask].head(50)
+    return jsonify({"recommandations": [carte(r) for _, r in matched.iterrows()], "total": int(mask.sum())})
 
 
 @app.errorhandler(413)
 def too_large(_):
-    return jsonify({"error": "Fichier trop volumineux (5 Mo max)"}), 413
+    return jsonify({"error": "Fichier trop volumineux (5 Mo max)."}), 413
+
+
+@app.errorhandler(404)
+def not_found(_):
+    return jsonify({"error": "Offre introuvable."}), 404
 
 
 if __name__ == "__main__":

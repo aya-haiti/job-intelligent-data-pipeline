@@ -58,6 +58,14 @@ if not all_results:
     exit(1)
 
 # 4. Format standard du projet
+def format_salaire(o):
+    lo, hi = o.get("salary_min"), o.get("salary_max")
+    if not lo and not hi:
+        return ""
+    txt = f"{int(lo):,} - {int(hi):,} GBP/an" if lo and hi and lo != hi else f"{int(lo or hi):,} GBP/an"
+    return txt + (" (estimation Adzuna)" if str(o.get("salary_is_predicted")) == "1" else "")
+
+
 rows = []
 for o in all_results:
     rows.append({
@@ -68,7 +76,11 @@ for o in all_results:
         "type_contrat": o.get("contract_type") or "Non precise",
         "description": (o.get("description") or "").strip(),
         "date_publication": ((o.get("created") or "")[:10]),
-        "source": "adzuna"
+        "source": "adzuna",
+        # URL de l'annonce d'origine renvoyée par l'API (à conserver pour le bouton « Voir l'offre »)
+        "lien": o.get("redirect_url") or "",
+        # Salaire uniquement s'il est fourni ; Adzuna signale les estimations avec salary_is_predicted
+        "salaire": format_salaire(o),
     })
 
 df = pd.DataFrame(rows).drop_duplicates(subset=["id_offre"])

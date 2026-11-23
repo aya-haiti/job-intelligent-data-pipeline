@@ -12,8 +12,9 @@ affiche alors un état "aucune donnée" au lieu de planter.
 import os
 import pandas as pd
 
-COLUMNS = ["id_offre", "titre", "entreprise", "ville", "type_contrat",
-           "description", "date_publication", "source", "lien", "pays"]
+COLUMNS = ["id_offre", "titre", "entreprise", "ville", "pays", "type_contrat", "type_travail", "niveau",
+           "description", "salaire", "date_publication", "source", "lien", "competences_source",
+           "competences", "lien_statut", "lien_verifie_le"]
 
 DEFAULT_CSV = os.path.join(os.path.dirname(__file__), "..", "data", "processed", "all_jobs_clean.csv")
 TABLE = os.getenv("JOBS_TABLE", "jobs_clean")
@@ -36,7 +37,7 @@ def load_offres() -> tuple[pd.DataFrame, str]:
 
     path = os.getenv("JOBS_CSV_PATH") or DEFAULT_CSV
     if os.path.exists(path):
-        return pd.read_csv(path), "csv"
+        return pd.read_csv(path, keep_default_na=False), "csv"
 
     return pd.DataFrame(columns=COLUMNS), "vide"
 
@@ -46,10 +47,12 @@ def normaliser(df: pd.DataFrame) -> pd.DataFrame:
     for col in COLUMNS:
         if col not in df.columns:
             df[col] = None
-    for col in ["titre", "entreprise", "ville", "type_contrat", "source", "pays", "lien"]:
-        df[col] = df[col].fillna("").astype(str).str.strip()
-    df["description"] = df["description"].fillna("").astype(str)
-    df["pays"] = df["pays"].replace("", "International")
-    df["type_contrat"] = df["type_contrat"].replace("", "Non précisé")
+    for col in COLUMNS:
+        if col != "date_publication":
+            df[col] = df[col].fillna("").astype(str).str.strip().replace({"nan": "", "None": ""})
+    # Anciens fichiers : une valeur de remplissage n'est pas une donnée
+    for col in ["entreprise", "ville", "type_contrat"]:
+        df.loc[df[col].isin(["Inconnu", "Non precise", "Non précisé", "Unknown"]), col] = ""
+    df.loc[(df["lien"] == "") & (df["lien_statut"] == ""), "lien_statut"] = "absente"
     df["date_publication"] = pd.to_datetime(df["date_publication"], errors="coerce")
     return df.reset_index(drop=True)

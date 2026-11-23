@@ -68,9 +68,11 @@ for o in offres:
         "entreprise": o.get("entreprise", {}).get("nom", ""),
         "ville": o.get("lieuTravail", {}).get("libelle", ""),
         "type_contrat": o.get("typeContrat", ""),
-        "description": o.get("description", "")[:500],  # tronqué pour la lisibilité
+        "description": o.get("description", ""),  # description complète (plus de troncature)
         "date_publication": o.get("dateCreation", "")[:10],
-        "source": "france-travail"
+        "source": "france-travail",
+        "lien": (o.get("origineOffre") or {}).get("urlOrigine", ""),
+        "salaire": (o.get("salaire") or {}).get("libelle", ""),
     })
 
 df = pd.DataFrame(data)

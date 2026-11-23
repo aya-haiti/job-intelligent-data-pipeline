@@ -44,7 +44,25 @@ def test_analytics_counts_real_rows(client):
 
 def test_recommend(client):
     r = client.post("/api/recommend", json={"profile": "Python Airflow data engineer"})
-    assert r.status_code == 200 and r.json["recommandations"][0]["id_offre"] == "t-1"
+    assert r.status_code == 200
+    top = r.json["recommandations"][0]
+    assert top["id_offre"] == "t-1"
+    assert "Python" in top["skills_matched"] and top["lien"] == "https://example.org/1"
+    assert "description" not in top  # full text only in the detail endpoint
+
+
+def test_recommend_sort_filter_and_pagination(client):
+    r = client.post("/api/recommend", json={"profile": "Python SQL data", "tri": "competences", "source": "rekrute"})
+    assert r.status_code == 200 and all(c["source"] == "rekrute" for c in r.json["recommandations"])
+    assert r.json["page"] == 1 and r.json["pages"] >= 1
+
+
+def test_offer_detail_full_description_and_missing_fields(client):
+    d = client.get("/api/offre/t-1").json
+    assert d["description"].startswith("Python, SQL, Airflow")
+    d2 = client.get("/api/offre/t-2").json
+    assert d2["lien"] == "" and d2["lien_statut"] == "absente" and d2["salaire"] == ""
+    assert client.get("/api/offre/unknown").status_code == 404
 
 
 def test_upload_rejects_non_cv(client):

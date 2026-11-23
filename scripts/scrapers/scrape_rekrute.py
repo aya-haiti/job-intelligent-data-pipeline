@@ -86,7 +86,7 @@ def scrape_page(page_number):
                 "entreprise": entreprise,
                 "ville": ville,
                 "type_contrat": type_contrat,
-                "description": description[:500],
+                "description": description,
                 "date_publication": datetime.now().strftime("%Y-%m-%d"),
                 "source": "rekrute",
                 "lien": lien
