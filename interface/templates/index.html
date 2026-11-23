@@ -188,6 +188,13 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
     </ol>
     <h2>Calcul du score</h2>
     <p>Votre texte (CV ou profil) et chaque offre (titre ×3 + description) sont transformés en vecteurs TF-IDF (5 000 termes, unigrammes et bigrammes). Le score est la similarité cosinus entre les deux vecteurs, de 0 à 100 %. La couverture indique la part des compétences de l'offre présentes dans votre profil.</p>
+    <h2>Sources et licences</h2>
+    <ul>
+      <li>Dataset Kaggle « Data Science Job Postings & Skills » (asaniczka), offres LinkedIn de janvier 2024 — licence <a href="https://opendatacommons.org/licenses/by/1-0/" target="_blank" rel="noopener">ODC-By 1.0</a>, réutilisé avec attribution.</li>
+      <li>Offres Adzuna obtenues via l'<a href="https://developer.adzuna.com/" target="_blank" rel="noopener">API Adzuna</a> — <b>Jobs by Adzuna</b>.</li>
+      <li>Offres France Travail obtenues via l'API Offres d'emploi (<a href="https://francetravail.io" target="_blank" rel="noopener">francetravail.io</a>).</li>
+      <li>Offres Rekrute collectées sur rekrute.com (page de liste publique).</li>
+    </ul>
     <h2>Limites connues</h2>
     <ul id="limits"></ul>
   </section>
@@ -267,7 +274,7 @@ function origBtn(o){
 }
 function card(o){
   const meta=[o.type_contrat&&`<span><b>${esc(o.type_contrat)}</b></span>`,o.type_travail&&`<span>${esc(o.type_travail)}</span>`,o.niveau&&`<span>${esc(o.niveau)}</span>`,
-    `<span>${o.salaire?'💶 <b>'+esc(o.salaire)+'</b>':'Salaire non communiqué'}</span>`,`<span>${esc(SRC[o.source]||o.source)}${o.date_publication?' · '+o.date_publication:''}</span>`].filter(Boolean).join('');
+    `<span>${o.salaire?'💶 <b>'+esc(o.salaire)+'</b>':'Salaire non communiqué'}</span>`,`<span>${o.source==='adzuna'?'<b>Jobs by Adzuna</b>':esc(SRC[o.source]||o.source)}${o.date_publication?' · '+o.date_publication:''}</span>`].filter(Boolean).join('');
   return `<article class="panel card">
     <div><h3>${esc(o.titre)}</h3><div class="sub">${o.entreprise?esc(o.entreprise):'Entreprise non communiquée'} · ${esc(o.ville||'Lieu non communiqué')}${o.pays&&!String(o.ville).includes(o.pays)?', '+esc(o.pays):''}</div><div class="meta">${meta}</div></div>
     <div class="score" title="Similarité TF-IDF"><div class="ring" style="--p:${Math.min(100,o.score_pct)}"><span>${Math.round(o.score_pct)}%</span></div><small>similarité${o.couverture_pct!=null?' · '+o.couverture_pct+'% couverture':''}</small></div>
