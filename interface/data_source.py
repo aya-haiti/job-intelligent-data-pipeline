@@ -17,6 +17,7 @@ COLUMNS = ["id_offre", "titre", "entreprise", "ville", "pays", "type_contrat", "
            "competences", "lien_statut", "lien_verifie_le"]
 
 DEFAULT_CSV = os.path.join(os.path.dirname(__file__), "..", "data", "processed", "all_jobs_clean.csv")
+BUNDLED_CSV = os.path.join(os.path.dirname(__file__), "..", "data", "deploy", "jobs_kaggle_odcby.csv.gz")
 TABLE = os.getenv("JOBS_TABLE", "jobs_clean")
 
 
@@ -38,6 +39,10 @@ def load_offres() -> tuple[pd.DataFrame, str]:
     path = os.getenv("JOBS_CSV_PATH") or DEFAULT_CSV
     if os.path.exists(path):
         return pd.read_csv(path, keep_default_na=False), "csv"
+
+    # 4. Jeu de données publié avec l'application (Kaggle, licence ODC-By) — utilisé par le déploiement public
+    if os.path.exists(BUNDLED_CSV):
+        return pd.read_csv(BUNDLED_CSV, keep_default_na=False), "csv (ODC-By)"
 
     return pd.DataFrame(columns=COLUMNS), "vide"
 

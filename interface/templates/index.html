@@ -107,8 +107,9 @@ dialog::backdrop{background:rgba(15,23,42,.45)}
 /* Market */
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 .kpi{padding:16px}.kpi b{display:block;font-size:1.5rem;letter-spacing:-.02em}.kpi span{color:var(--muted);font-size:.85rem}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-.box{padding:18px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+.box{padding:18px;min-width:0}
+main,.panel{min-width:0}
 .chart{position:relative;height:320px}
 table{width:100%;border-collapse:collapse;font-size:.88rem}
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.03em}
@@ -116,8 +117,8 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 .tablewrap{overflow-x:auto}
 .prose p,.prose li{color:var(--muted);max-width:75ch}.prose h2{margin-top:24px}
 
-@media(max-width:820px){.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}.hd .gh{display:none}}
-@media(max-width:560px){.card{grid-template-columns:1fr}.score{grid-row:auto;display:flex;align-items:center;gap:10px;text-align:left}.ring{margin:0}.hd{gap:12px}.logo span{display:none}}
+@media(max-width:820px){.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:minmax(0,1fr)}.hd .gh{display:none}}
+@media(max-width:560px){.card{grid-template-columns:1fr}.score{grid-row:auto;display:flex;align-items:center;gap:10px;text-align:left}.ring{margin:0}.hd{gap:8px}.logo span{display:none}nav button{padding:8px 9px;font-size:.88rem}nav .long{display:none}.chart{height:280px}.kpi b{font-size:1.25rem}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -128,7 +129,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
     <nav role="tablist" aria-label="Sections">
       <button role="tab" id="t-match" aria-controls="p-match" aria-selected="true">Matching CV</button>
       <button role="tab" id="t-market" aria-controls="p-market" aria-selected="false" tabindex="-1">Marché</button>
-      <button role="tab" id="t-about" aria-controls="p-about" aria-selected="false" tabindex="-1">Données & méthode</button>
+      <button role="tab" id="t-about" aria-controls="p-about" aria-selected="false" tabindex="-1">Données<span class="long"> & méthode</span></button>
     </nav>
     <a class="gh" href="https://github.com/aya-haiti/job-intelligent-data-pipeline" target="_blank" rel="noopener">Code source ↗</a>
   </div>
